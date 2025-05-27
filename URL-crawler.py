@@ -33,6 +33,9 @@ visited_urls = set()
 # Set to store all unique URLs that have been collected.
 collected_urls = set()
 
+# Counter for the number of HTTP requests made
+requests_made = 0
+
 def is_valid_url(url):
     """
     Checks if a URL is valid and not a mailto or tel link.
@@ -49,6 +52,7 @@ def get_page_content(url, timeout=10, headers=None, user_agents=None, proxy=None
     Supports User-Agent rotation and proxies.
     Returns a tuple: (content, content_type) or (None, None) on error.
     """
+    global requests_made  # Use the global counter
     try:
         current_headers = {}
         if headers:
@@ -67,6 +71,8 @@ def get_page_content(url, timeout=10, headers=None, user_agents=None, proxy=None
             # For simplicity, this example assumes the proxy works for both http and https.
             proxies = {'http': proxy, 'https': proxy}
         
+        # Increment the requests_made counter before making the request
+        requests_made += 1
         response = requests.get(url, headers=current_headers, timeout=timeout, allow_redirects=True, proxies=proxies)
         response.raise_for_status()
         content_type = response.headers.get('content-type', '').lower()
@@ -225,13 +231,14 @@ def is_allowed_by_robots(url, robots_parser):
     user_agent = '*'  # We use * for generic crawling
     return robots_parser.can_fetch(user_agent, url)
 
-def crawl(start_url, max_depth=2, min_delay=1, max_delay=3, stay_on_domain=True, output_file=None, headers=None, user_agents=None, proxy=None, include_pattern=None, exclude_pattern=None, parse_scripts=False, parse_json=False, respect_robots=False, max_urls=None):
+def crawl(start_url, max_depth=2, min_delay=1, max_delay=3, stay_on_domain=True, output_file=None, headers=None, user_agents=None, proxy=None, include_pattern=None, exclude_pattern=None, parse_scripts=False, parse_json=False, respect_robots=False, max_urls=None, shallow=False):
     """
     Main crawling function.
     Recursively crawls web pages up to a specified depth.
     Includes randomized delays, URL filtering, and optional script/JSON parsing.
     Optionally respects robots.txt if respect_robots is True.
     Stops crawling if max_urls is reached (if set).
+    If shallow is True, only collects URLs from the initial page and does not follow links.
     """
     queue = [(start_url, 0)]
     start_domain = urlparse(start_url).netloc
@@ -310,10 +317,15 @@ def crawl(start_url, max_depth=2, min_delay=1, max_delay=3, stay_on_domain=True,
                     if exclude_regex and exclude_regex.search(new_url):
                         logging.debug(f"Skipping {new_url} from queue (matches exclude pattern)")
                         continue
-                    queue.append((new_url, depth + 1))
+                    # If shallow mode is enabled, do not queue new URLs for crawling
+                    if not shallow:
+                        queue.append((new_url, depth + 1))
                     collected_urls.add(new_url)
         actual_delay = random.uniform(min_delay, max_delay)
         logging.debug(f"Waiting for {actual_delay:.2f} seconds...")
+        # In shallow mode, only process the first page, so break after first iteration
+        if shallow:
+            break
         time.sleep(actual_delay)
     print()  # Move to next line after progress bar
     logging.info(f"Crawling finished. Found {len(collected_urls)} unique URLs.")
@@ -352,6 +364,8 @@ def main():
     parser.add_argument("--respect-robots", action="store_true", help="Respect robots.txt rules (default: off)")
     parser.add_argument("--max-urls", type=int, help="Maximum number of URLs to crawl (default: unlimited)")
     parser.add_argument("--json-output", action="store_true", help="Output collected URLs as JSON array to stdout (overrides -o if set)")
+    # Add the shallow option
+    parser.add_argument("--shallow", action="store_true", help="Only collect URLs from the initial page, do not follow links.")
 
     args = parser.parse_args()
 
@@ -390,6 +404,8 @@ def main():
         logging.info("Parsing of JSON responses for URLs is enabled.")
     if args.output:
         logging.info(f"Output will be saved to: {args.output}")
+    if args.shallow:
+        logging.info("Shallow mode enabled: Only collecting URLs from the initial page.")
 
     crawl(
         args.start_url, 
@@ -406,12 +422,17 @@ def main():
         args.parse_scripts,
         args.parse_json,
         args.respect_robots,
-        args.max_urls
+        args.max_urls,
+        args.shallow # Pass the shallow flag
     )
 
     # Output results as JSON if requested
     if args.json_output:
-        print(json.dumps(sorted(list(collected_urls)), indent=2))
+        # Output both URLs and requests_made as a JSON object
+        print(json.dumps({
+            "urls": sorted(list(collected_urls)),
+            "requests_made": requests_made
+        }, indent=2))
         return
     if not args.output:
         # If no output file is specified, print to console.
@@ -422,6 +443,7 @@ def main():
         else:
             print("No URLs collected.")
         print(f"--- Found {len(collected_urls)} unique URLs ---")
+        print(f"--- Total HTTP requests made: {requests_made} ---")
 
 
 if __name__ == "__main__":
