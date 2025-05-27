@@ -1,0 +1,4 @@
+requests>=2.25.0
+beautifulsoup4>=4.9.0
+urllib3>=1.26.0  # For robots.txt parsing
+# If you want SOCKS proxy support, install: requests[socks] 
