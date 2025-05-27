@@ -17,6 +17,8 @@ This Python script is a simple web crawler designed to traverse web pages starti
 - Respects robots.txt rules if requested.
 - Limits the number of unique URLs crawled.
 - Outputs collected URLs as a JSON array to stdout if requested.
+- Optionally only collects URLs from the initial page (shallow mode) to minimize requests.
+- Shows the total number of HTTP requests made in the output.
 
 ## Requirements
 
@@ -73,6 +75,11 @@ python crawler.py <start_url> [options]
 -   `--respect-robots`: (Flag) Respect robots.txt rules (default: off). If set, the crawler will skip URLs disallowed by robots.txt for User-Agent '*'.
 -   `--max-urls N`: Maximum number of unique URLs to crawl (default: unlimited).
 -   `--json-output`: (Flag) Output collected URLs as a JSON array to stdout (overrides -o if set).
+-   `--shallow`: (Flag) Only collect URLs from the initial page and do not follow links. This minimizes the number of requests made to the target domain (useful for stealthy red teaming).
+
+### Output Metrics
+
+-   The output now includes a metric showing the total number of HTTP requests made during the crawl. This is shown in both the console output and the JSON output (as `requests_made`).
 
 ### Examples
 
@@ -114,6 +121,13 @@ python crawler.py <start_url> [options]
     python crawler.py http://example.com --respect-robots --max-urls 100 --json-output
     ```
 
+8.  **Shallow crawl (only collect URLs from the initial page, do not follow links):**
+    ```bash
+    python crawler.py http://example.com --shallow
+    ```
+
+    This will minimize the number of requests made to the target domain (only one request for the initial page).
+
 ## How it Works
 
 1.  **Initialization**: Takes a starting URL and other parameters.
@@ -123,7 +137,7 @@ python crawler.py <start_url> [options]
 5.  **URL Validation & Normalization**: Converts relative URLs to absolute URLs and validates them. Applies include/exclude filters.
 6.  **Storing**: Stores all unique collected URLs in a set to avoid duplicates and keeps track of visited URLs to prevent re-crawling.
 7.  **Recursion/Iteration**: Adds newly found, unvisited URLs (within the specified depth and domain constraints) to the queue.
-8.  **Output**: Saves the list of unique URLs to a file or prints them.
+8.  **Output**: Saves the list of unique URLs to a file or prints them. The output also includes the total number of HTTP requests made during the crawl (shown in the console and in JSON output as `requests_made`).
 
 ## Ethical Considerations & Disclaimer
 
