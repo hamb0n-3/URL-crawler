@@ -44,13 +44,14 @@ def is_valid_url(url):
     parsed = urlparse(url)
     return bool(parsed.scheme) and bool(parsed.netloc) and parsed.scheme not in ['mailto', 'tel']
 
-def get_page_content(url, timeout=10, headers=None, user_agents=None, proxy=None):
+def get_page_content(url, timeout=10, headers=None, user_agents=None, proxy=None, ignore_cert_errors=False):
     """
     Fetches the content of a web page.
     Includes a timeout to prevent the script from hanging indefinitely.
     Allows custom headers, which can be useful for mimicking different user agents.
     Supports User-Agent rotation and proxies.
     Returns a tuple: (content, content_type) or (None, None) on error.
+    If ignore_cert_errors is True, disables SSL certificate verification (not recommended for production).
     """
     global requests_made  # Use the global counter
     try:
@@ -73,7 +74,8 @@ def get_page_content(url, timeout=10, headers=None, user_agents=None, proxy=None
         
         # Increment the requests_made counter before making the request
         requests_made += 1
-        response = requests.get(url, headers=current_headers, timeout=timeout, allow_redirects=True, proxies=proxies)
+        # If ignore_cert_errors is True, set verify to False
+        response = requests.get(url, headers=current_headers, timeout=timeout, allow_redirects=True, proxies=proxies, verify=not ignore_cert_errors)
         response.raise_for_status()
         content_type = response.headers.get('content-type', '').lower()
         return response.content, content_type # Return content and its type
@@ -231,7 +233,7 @@ def is_allowed_by_robots(url, robots_parser):
     user_agent = '*'  # We use * for generic crawling
     return robots_parser.can_fetch(user_agent, url)
 
-def crawl(start_url, max_depth=2, min_delay=1, max_delay=3, stay_on_domain=True, output_file=None, headers=None, user_agents=None, proxy=None, include_pattern=None, exclude_pattern=None, parse_scripts=False, parse_json=False, respect_robots=False, max_urls=None, shallow=False):
+def crawl(start_url, max_depth=2, min_delay=1, max_delay=3, stay_on_domain=True, output_file=None, headers=None, user_agents=None, proxy=None, include_pattern=None, exclude_pattern=None, parse_scripts=False, parse_json=False, respect_robots=False, max_urls=None, shallow=False, ignore_cert_errors=False):
     """
     Main crawling function.
     Recursively crawls web pages up to a specified depth.
@@ -239,6 +241,7 @@ def crawl(start_url, max_depth=2, min_delay=1, max_delay=3, stay_on_domain=True,
     Optionally respects robots.txt if respect_robots is True.
     Stops crawling if max_urls is reached (if set).
     If shallow is True, only collects URLs from the initial page and does not follow links.
+    If ignore_cert_errors is True, disables SSL certificate verification for requests.
     """
     queue = [(start_url, 0)]
     start_domain = urlparse(start_url).netloc
@@ -281,7 +284,7 @@ def crawl(start_url, max_depth=2, min_delay=1, max_delay=3, stay_on_domain=True,
         # --- Progress indicator ---
         print(f"[Progress] Visited: {len(visited_urls)} | Collected: {len(collected_urls)} | In Queue: {len(queue)}", end='\r', flush=True)
         # --- End progress indicator ---
-        page_content, content_type = get_page_content(current_url, headers=headers, user_agents=user_agents, proxy=proxy)
+        page_content, content_type = get_page_content(current_url, headers=headers, user_agents=user_agents, proxy=proxy, ignore_cert_errors=ignore_cert_errors)
         extracted_new_urls = set()
         if page_content:
             if 'text/html' in content_type:
@@ -366,6 +369,7 @@ def main():
     parser.add_argument("--json-output", action="store_true", help="Output collected URLs as JSON array to stdout (overrides -o if set)")
     # Add the shallow option
     parser.add_argument("--shallow", action="store_true", help="Only collect URLs from the initial page, do not follow links.")
+    parser.add_argument("--ignore-cert-errors", action="store_true", help="Ignore SSL certificate verification errors (not recommended for production use). Useful for crawling sites with self-signed or invalid certificates.")
 
     args = parser.parse_args()
 
@@ -423,7 +427,8 @@ def main():
         args.parse_json,
         args.respect_robots,
         args.max_urls,
-        args.shallow # Pass the shallow flag
+        args.shallow, # Pass the shallow flag
+        args.ignore_cert_errors # Pass the ignore_cert_errors flag
     )
 
     # Output results as JSON if requested
