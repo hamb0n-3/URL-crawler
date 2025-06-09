@@ -21,6 +21,7 @@ import re # For URL filtering using regular expressions
 import json # For parsing JSON content
 import urllib.robotparser
 import sys
+import urllib3  # For suppressing InsecureRequestWarning if needed
 
 # Configure logging for better feedback
 # This will show informational messages and any errors encountered.
@@ -151,9 +152,9 @@ def extract_urls_from_javascript(script_content, base_url):
     #   - URLs starting with http:// or https://
     #   - URLs starting with // (protocol-relative)
     #   - Relative paths starting with /, ./, ../
-    #   - Strings that look like domain.tld/path or domain.tld
+    #   - Strings that look like domain names (e.g., example.com, sub.domain.co.uk)
     url_pattern = re.compile(
-        r'(["\\'])(https?:\/\/[\w\-\.\/?#=&;%:+~@!$\'()*\[\],]+|\/\/[^"\'\s]+|\.{0,2}\/[^"\'\s]+|[\w\-]+\.[a-zA-Z]{2,}(?:\/[\w\-\.\/?#=&;%:+~@!$\'()*\[\],]*)?)(["\\'])'
+        r'(["\ \'])(https?:\/\/[\w\-\.\/?#=&;%:+~@!$\'()*\[\],]+|\/\/[^"\'\s]+|\.{0,2}\/[^"\'\s]+|(?:[\w\-]+\.)+[a-zA-Z]{2,}(?:\/[\w\-\.\/?#=&;%:+~@!$\'()*\[\],]*)?)(["\ \'])'
     )
     # The above regex is intentionally broad to catch most URL-like strings in JS.
     # It may catch some false positives, but that's better than missing URLs for recon.
@@ -372,6 +373,11 @@ def main():
     parser.add_argument("--ignore-cert-errors", action="store_true", help="Ignore SSL certificate verification errors (not recommended for production use). Useful for crawling sites with self-signed or invalid certificates.")
 
     args = parser.parse_args()
+
+    # Suppress InsecureRequestWarning if --ignore-cert-errors is set
+    if args.ignore_cert_errors:
+        # This disables the warning about unverified HTTPS requests
+        urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
     if not is_valid_url(args.start_url):
         logging.error(f"Invalid start URL: {args.start_url}. Please provide a full URL (e.g., http://example.com).")
