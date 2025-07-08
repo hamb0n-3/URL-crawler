@@ -154,7 +154,7 @@ def extract_urls_from_javascript(script_content, base_url):
     #   - Relative paths starting with /, ./, ../
     #   - Strings that look like domain names (e.g., example.com, sub.domain.co.uk)
     url_pattern = re.compile(
-        r'(["\ \'])(https?:\/\/[\w\-\.\/?#=&;%:+~@!$\'()*\[\],]+|\/\/[^"\'\s]+|\.{0,2}\/[^"\'\s]+|(?:[\w\-]+\.)+[a-zA-Z]{2,}(?:\/[\w\-\.\/?#=&;%:+~@!$\'()*\[\],]*)?)(["\ \'])'
+        r'(["\ \'])(https?:\/\/[\w\-\.\/?#=&;%:+~@!$\'()*\[\],]+|\/\/[^"\'\s]+|\.{0,2}\/[^"\'\s]+|(?:[a-zA-Z0-9\-]+\.)+[a-zA-Z]{2,}(?:\/[\w\-\.\/?#=&;%:+~@!$\'()*\[\],]*)?)(["\ \'])'
     )
     # The above regex is intentionally broad to catch most URL-like strings in JS.
     # It may catch some false positives, but that's better than missing URLs for recon.
