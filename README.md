@@ -36,38 +36,28 @@ This Python script is a simple web crawler designed to traverse web pages starti
 
     ```bash
     python3 -m venv crawler-env
-    source crawler-env/bin/activate  # On Windows use `crawler-env\Scripts\activate`
-    ```
-
-    Then install the packages:
-
-    ```bash
+    source crawler-env/bin/activate  # On Windows use `crawler-env\Scripts\activate
     pip install -r requirements.txt
     ```
 
 ## Usage
 
-The script is run from the command line.
+Run the crawler with default settings (max depth 2, stay on domain, 1s delay between requests):
 
 ```bash
-python crawler.py <start_url> [options]
+python crawler.py http://example.com
 ```
 
-### Arguments
+### Command-Line Options
 
--   `start_url`: (Required) The URL to begin crawling from (e.g., `http://example.com`).
-
-### Options
-
--   `--max-depth DEPTH`: Maximum depth to crawl. (Default: 2)
--   `--min-delay MIN_SECONDS`: Minimum delay in seconds between HTTP requests. (Default: 1.0)
--   `--max-delay MAX_SECONDS`: Maximum delay in seconds between HTTP requests. (Default: 3.0)
--   `--stay-on-domain`: (Flag) Stay on the same domain as the start URL. (Default: True)
--   `--no-stay-on-domain`: (Flag) Allow crawling to external domains.
--   `-o FILE, --output FILE`: File to save the collected URLs. If not specified, URLs are printed to console.
--   `--user-agent-string UA_STRING`: Specify a single User-Agent string directly.
--   `--user-agent-file UA_FILE`: Path to a file containing User-Agent strings (one per line). A random one is chosen for each request.
--   `--proxy PROXY_URL`: Proxy server to use (e.g., `http://user:pass@host:port` or `socks5://host:port` - note: SOCKS proxy requires `requests[socks]` to be installed separately).
+-   `-m, --max-depth N`: Maximum crawl depth (default: 2).
+-   `--no-stay-on-domain`: Allow crawling external domains (default: stay on the initial domain only).
+-   `--min-delay SECONDS`: Minimum delay between requests (default: 1).
+-   `--max-delay SECONDS`: Maximum delay between requests (default: 2).
+-   `-o, --output FILE`: Output file to save collected URLs.
+-   `--user-agent-string STRING`: Set a custom User-Agent string.
+-   `--user-agent-file FILE`: Provide a file with multiple User-Agent strings for rotation.
+-   `--proxy URL`: Use an HTTP/HTTPS proxy (e.g., `http://host:port` or `socks5://host:port` - note: SOCKS proxy requires `requests[socks]` to be installed separately).
 -   `--include-pattern REGEX`: Regex pattern for URLs to include. Only URLs matching this pattern will be crawled and collected.
 -   `--exclude-pattern REGEX`: Regex pattern for URLs to exclude. URLs matching this pattern will be ignored.
 -   `--parse-scripts`: (Flag) Attempt to extract URLs from JavaScript files/content and inline <script> tags in HTML.
@@ -148,3 +138,4 @@ python crawler.py <start_url> [options]
 -   **Scope**: Clearly define your scope when using this tool for an assessment. Only crawl targets you are authorized to assess.
 
 This tool is provided for educational and authorized red teaming purposes only. The author is not responsible for any misuse or damage caused by this script. 
+
